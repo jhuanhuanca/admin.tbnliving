@@ -4,7 +4,7 @@
       <div>
         <h1 class="text-xl font-semibold text-text">Pedidos y confirmación de pago</h1>
         <p class="text-sm text-text-muted">
-          Confirma pagos en efectivo, QR u otros. Al confirmar, el pedido pasa a completado y se encolan comisiones MLM.
+          Confirma pagos en efectivo, QR u otros. Usa <strong>Ver ítems</strong> para alistar productos y paquetes antes de la entrega.
         </p>
       </div>
       <button class="btn btn-ghost" type="button" :disabled="admin.loading.orders" @click="load">Actualizar</button>
@@ -28,6 +28,7 @@
               <th class="px-4 py-3 font-semibold">ID</th>
               <th class="px-4 py-3 font-semibold">Socio</th>
               <th class="px-4 py-3 font-semibold">Tipo</th>
+              <th class="px-4 py-3 font-semibold">Ítems</th>
               <th class="px-4 py-3 text-end font-semibold">Total</th>
               <th class="px-4 py-3 font-semibold">Estado</th>
               <th class="px-4 py-3 font-semibold">Pago ref.</th>
@@ -37,7 +38,7 @@
           </thead>
           <tbody>
             <tr v-if="admin.loading.orders">
-              <td colspan="8" class="px-4 py-8 text-center text-text-muted">Cargando…</td>
+              <td colspan="9" class="px-4 py-8 text-center text-text-muted">Cargando…</td>
             </tr>
             <tr v-for="row in admin.orders.rows" v-else :key="row.id" class="border-t border-border">
               <td class="px-4 py-3">{{ row.id }}</td>
@@ -46,6 +47,15 @@
                 <span class="text-text-muted">({{ row.user?.member_code || '—' }})</span>
               </td>
               <td class="px-4 py-3">{{ row.tipo }}</td>
+              <td class="px-4 py-3">
+                <button type="button" class="btn btn-ghost btn-sm !px-2" @click="openDetail(row)">
+                  Ver ítems
+                  <span class="ml-1 text-text-muted">({{ orderItems(row).length }})</span>
+                </button>
+                <p v-if="orderItems(row).length" class="mt-1 max-w-[220px] truncate text-xs text-text-muted">
+                  {{ itemsPreview(row) }}
+                </p>
+              </td>
               <td class="px-4 py-3 text-end font-semibold">{{ formatBs(row.total) }}</td>
               <td class="px-4 py-3">
                 <span v-if="row.estado === 'pendiente_pago'" class="badge badge-warn">Pendiente pago</span>
@@ -97,7 +107,7 @@
               </td>
             </tr>
             <tr v-if="!admin.loading.orders && !admin.orders.rows.length">
-              <td colspan="8" class="px-4 py-8 text-center text-text-muted">No hay pedidos en este filtro.</td>
+              <td colspan="9" class="px-4 py-8 text-center text-text-muted">No hay pedidos en este filtro.</td>
             </tr>
           </tbody>
         </table>
@@ -106,15 +116,119 @@
         Total: {{ admin.orders.meta.total }} resultado(s)
       </p>
     </div>
+
+    <Modal
+      :open="detailOpen"
+      title="Vista previa del pedido"
+      :subtitle="detailSubtitle"
+      @close="closeDetail"
+    >
+      <div v-if="selectedOrder" class="space-y-4">
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div class="rounded-xl border border-border bg-white/2 px-3 py-2">
+            <p class="text-xs text-text-muted">Cliente</p>
+            <p class="text-sm font-semibold text-text">{{ selectedOrder.user?.name || '—' }}</p>
+            <p class="text-xs text-text-muted">
+              Código: {{ selectedOrder.user?.member_code || selectedOrder.user?.referral_code || '—' }}
+              · {{ selectedOrder.user?.email || '—' }}
+            </p>
+          </div>
+          <div class="rounded-xl border border-border bg-white/2 px-3 py-2">
+            <p class="text-xs text-text-muted">Pedido</p>
+            <p class="text-sm font-semibold text-text">
+              #{{ selectedOrder.id }} · {{ selectedOrder.tipo || '—' }}
+            </p>
+            <p class="text-xs text-text-muted">
+              Estado: {{ selectedOrder.estado }} · Pago: {{ selectedOrder.payment_method || '—' }}
+            </p>
+          </div>
+        </div>
+
+        <div v-if="pickingSummary.length" class="rounded-xl border border-brand/30 bg-brand/5 px-3 py-3">
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-brand">Resumen para alistamiento</p>
+          <ul class="space-y-1">
+            <li v-for="(line, idx) in pickingSummary" :key="idx" class="flex items-center justify-between gap-2 text-sm">
+              <span>
+                <span :class="line.kindClass">{{ line.kind }}</span>
+                {{ line.name }}
+              </span>
+              <strong class="shrink-0">× {{ line.qty }}</strong>
+            </li>
+          </ul>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-border">
+          <table class="min-w-full text-left text-sm">
+            <thead class="bg-white/3 text-xs text-text-muted">
+              <tr>
+                <th class="px-3 py-2 font-semibold">Tipo</th>
+                <th class="px-3 py-2 font-semibold">Código</th>
+                <th class="px-3 py-2 font-semibold">Descripción</th>
+                <th class="px-3 py-2 text-end font-semibold">Cant.</th>
+                <th class="px-3 py-2 text-end font-semibold">P. unit.</th>
+                <th class="px-3 py-2 text-end font-semibold">Subtotal</th>
+                <th class="px-3 py-2 text-end font-semibold">PV</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in orderItems(selectedOrder)" :key="item.id" class="border-t border-border">
+                <td class="px-3 py-2">
+                  <span :class="lineTypeBadgeClass(item)">{{ lineTypeLabel(item) }}</span>
+                </td>
+                <td class="px-3 py-2 font-mono text-xs text-text-muted">{{ lineCode(item) }}</td>
+                <td class="px-3 py-2">{{ lineName(item) }}</td>
+                <td class="px-3 py-2 text-end font-semibold">{{ item.cantidad ?? 1 }}</td>
+                <td class="px-3 py-2 text-end">{{ formatBs(item.precio_unitario) }}</td>
+                <td class="px-3 py-2 text-end font-semibold">{{ formatBs(item.precio_total) }}</td>
+                <td class="px-3 py-2 text-end text-text-muted">{{ formatPv(item.pv_points) }}</td>
+              </tr>
+              <tr v-if="!orderItems(selectedOrder).length">
+                <td colspan="7" class="px-3 py-6 text-center text-text-muted">Este pedido no tiene líneas registradas.</td>
+              </tr>
+            </tbody>
+            <tfoot v-if="orderItems(selectedOrder).length">
+              <tr class="border-t border-border bg-white/2">
+                <td colspan="5" class="px-3 py-2 text-end text-xs font-semibold text-text-muted">Total pedido</td>
+                <td class="px-3 py-2 text-end font-semibold">{{ formatBs(selectedOrder.total) }}</td>
+                <td class="px-3 py-2 text-end text-text-muted">{{ formatPv(selectedOrder.total_pv) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="flex flex-wrap justify-end gap-2">
+          <button
+            v-if="selectedOrder.estado === 'completado'"
+            type="button"
+            class="btn btn-ghost btn-sm"
+            :disabled="printingDoc"
+            @click="imprimirFactura(selectedOrder)"
+          >
+            Imprimir factura
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" @click="closeDetail">Cerrar</button>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useAdminStore } from '@/stores/adminStore'
 import { useUiStore } from '@/stores/uiStore'
 import { adminService } from '@/services/api/adminService'
 import { usePrintDocument } from '@/composables/usePrintDocument'
+import Modal from '@/components/admin/Modal.vue'
+import {
+  lineCode,
+  lineName,
+  lineTypeBadgeClass,
+  lineTypeLabel,
+  orderItems,
+  orderItemsPreview,
+  pickingSummaryFromItems,
+} from '@/utils/orderLineDisplay'
 
 const admin = useAdminStore()
 const ui = useUiStore()
@@ -126,11 +240,33 @@ const procesandoId = ref(null)
 const imprimiendoId = ref(null)
 const metodoConfirm = reactive({})
 const notasConfirm = reactive({})
+const detailOpen = ref(false)
+const selectedOrder = ref(null)
+
+const detailSubtitle = computed(() => {
+  if (!selectedOrder.value) return ''
+  const o = selectedOrder.value
+  return `Pedido #${o.id} · ${o.user?.name || 'Cliente'} · ${formatBs(o.total)}`
+})
+
+const pickingSummary = computed(() =>
+  selectedOrder.value ? pickingSummaryFromItems(orderItems(selectedOrder.value)) : []
+)
+
+function itemsPreview(row) {
+  return orderItemsPreview(orderItems(row))
+}
 
 function formatBs(v) {
   const n = Number(v)
   if (Number.isNaN(n)) return '—'
   return new Intl.NumberFormat('es-BO', { style: 'currency', currency: 'BOB', minimumFractionDigits: 2 }).format(n)
+}
+
+function formatPv(v) {
+  const n = Number(v)
+  if (Number.isNaN(n) || n === 0) return '—'
+  return new Intl.NumberFormat('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n)
 }
 
 function formatDate(iso) {
@@ -139,6 +275,16 @@ function formatDate(iso) {
   } catch {
     return iso
   }
+}
+
+function openDetail(row) {
+  selectedOrder.value = row
+  detailOpen.value = true
+}
+
+function closeDetail() {
+  detailOpen.value = false
+  selectedOrder.value = null
 }
 
 async function load() {
@@ -164,6 +310,9 @@ async function confirmarPago(row) {
     notasConfirm[row.id] = ''
     ui.toast({ type: 'success', title: 'Pago confirmado', message: `Pedido #${row.id}` })
     await load()
+    if (selectedOrder.value?.id === row.id) {
+      selectedOrder.value = admin.orders.rows.find((r) => r.id === row.id) || null
+    }
   } catch (e) {
     error.value = e?.response?.data?.message || 'No se pudo confirmar el pago.'
   } finally {
