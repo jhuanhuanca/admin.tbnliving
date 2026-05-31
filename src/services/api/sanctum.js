@@ -1,4 +1,3 @@
-import axios from 'axios'
 import { http } from './httpClient'
 
 let csrfPromise = null
@@ -13,14 +12,8 @@ export async function ensureCsrfCookie() {
   }
 
   if (!csrfPromise) {
-    const baseURL = http.defaults.baseURL || ''
-    csrfPromise = axios
-      .get('/sanctum/csrf-cookie', {
-        baseURL,
-        withCredentials: true,
-        headers: { Accept: 'application/json' },
-        timeout: 15000,
-      })
+    csrfPromise = http
+      .get('/sanctum/csrf-cookie')
       .finally(() => {
         csrfPromise = null
       })
