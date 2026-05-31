@@ -14,9 +14,9 @@
     </div>
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <KPIBox title="Balance" :value="admin.wallet?.balance ?? 0" format="currency" currency="USD" hint="Actual" />
-      <KPIBox title="Ingresos" :value="admin.wallet?.income ?? 0" format="currency" currency="USD" hint="Periodo" />
-      <KPIBox title="Egresos" :value="admin.wallet?.expense ?? 0" format="currency" currency="USD" hint="Periodo" />
+      <KPIBox title="Balance" :value="admin.wallet?.balance ?? 0" format="currency" hint="Actual" />
+      <KPIBox title="Ingresos" :value="admin.wallet?.income ?? 0" format="currency" hint="Periodo" />
+      <KPIBox title="Egresos" :value="admin.wallet?.expense ?? 0" format="currency" hint="Periodo" />
     </div>
 
     <Table
@@ -49,6 +49,7 @@ import { onMounted } from 'vue'
 import KPIBox from '@/components/admin/KPIBox.vue'
 import Table from '@/components/admin/Table.vue'
 import { useAdminStore } from '@/stores/adminStore'
+import { formatBob } from '@/utils/money'
 
 const admin = useAdminStore()
 
@@ -60,7 +61,7 @@ const columns = [
 ]
 
 function formatMoney(v) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(v)
+  return formatBob(v)
 }
 
 async function refresh() {
@@ -70,7 +71,7 @@ async function refresh() {
 function buildHtmlReport() {
   const w = admin.wallet
   const rows = w?.movements ?? []
-  const fmt = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(Number(v) || 0)
+  const fmt = (v) => formatBob(Number(v) || 0)
   const esc = (s) => String(s ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
 
   return `<!DOCTYPE html>

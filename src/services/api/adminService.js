@@ -68,6 +68,16 @@ export const adminService = {
     return (await http.post(`/api/v1/admin/withdrawals/${id}/reject`, payload)).data
   },
 
+  // --- TICKETS SOPORTE ---
+  async listSupportTickets({ estado = 'all', prioridad = 'all', per_page = 50 } = {}) {
+    const res = await http.get('/api/v1/admin/support-tickets', { params: { estado, prioridad, per_page } })
+    return paginatedRows(res)
+  },
+
+  async updateSupportTicket(id, payload = {}) {
+    return (await http.patch(`/api/v1/admin/support-tickets/${id}`, payload)).data
+  },
+
   // --- PEDIDOS ---
   async listOrders({ estado = 'pendiente_pago', per_page = 50 } = {}) {
     const res = await http.get('/api/v1/admin/orders', { params: { estado, per_page } })

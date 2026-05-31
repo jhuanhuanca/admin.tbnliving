@@ -67,6 +67,14 @@ const actions = computed(() => {
       run: () => router.push('/admin/withdrawals'),
       can: () => perms.can('withdrawals.view') || perms.can('withdrawals.approve'),
     },
+    {
+      key: 'go-support-tickets',
+      group: 'Go',
+      label: 'Tickets soporte',
+      hint: '/admin/support-tickets',
+      run: () => router.push('/admin/support-tickets'),
+      can: () => perms.can('support.tickets') || perms.isSuperAdmin,
+    },
     { key: 'toggle-theme', group: 'UI', label: 'Cambiar tema', hint: 'Dark/Light', run: () => ui.toggleTheme() },
     { key: 'open-notifs', group: 'UI', label: 'Abrir notificaciones', hint: 'Centro de notificaciones', run: () => (notifs.seedMock(), notifs.open = true) },
   ]

@@ -24,21 +24,25 @@
 
 <script setup>
 import { computed } from 'vue'
+import { BOB_LOCALE, formatBob } from '@/utils/money'
 
 const props = defineProps({
   title: { type: String, required: true },
   value: { type: [Number, String], required: true },
   format: { type: String, default: 'number' }, // number | currency
-  currency: { type: String, default: 'USD' },
+  currency: { type: String, default: 'BOB' },
   hint: { type: String, default: '' },
   delta: { type: Number, default: null },
 })
 
 const formattedValue = computed(() => {
-  if (typeof props.value === 'string') return props.value
+  if (typeof props.value === 'string' && props.format !== 'currency') return props.value
+  const n = Number(props.value)
   if (props.format === 'currency') {
-    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: props.currency }).format(props.value)
+    if (props.currency === 'BOB') return formatBob(n)
+    return new Intl.NumberFormat(BOB_LOCALE, { style: 'currency', currency: props.currency }).format(n)
   }
-  return new Intl.NumberFormat('es-ES').format(props.value)
+  if (Number.isNaN(n)) return String(props.value ?? '—')
+  return new Intl.NumberFormat(BOB_LOCALE).format(n)
 })
 </script>

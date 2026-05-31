@@ -22,8 +22,18 @@
 
     <template v-else-if="admin.stats">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KPIBox title="Ingresos pedidos (completados)" :value="formatBsNum(admin.stats.orders_revenue_total)" format="number" hint="BOB acumulado" />
-        <KPIBox title="Comisiones (hist.)" :value="formatBsNum(admin.stats.commissions_paid_total)" format="number" hint="Eventos acumulados" />
+        <KPIBox
+          title="Ingresos pedidos (completados)"
+          :value="Number(admin.stats.orders_revenue_total) || 0"
+          format="currency"
+          hint="Acumulado histórico"
+        />
+        <KPIBox
+          title="Comisiones (hist.)"
+          :value="Number(admin.stats.commissions_paid_total) || 0"
+          format="currency"
+          hint="Eventos acumulados"
+        />
         <KPIBox title="Nuevos este mes" :value="String(admin.stats.users_new_this_month ?? 0)" hint="Registros" />
         <KPIBox
           title="Volumen binario"
@@ -45,7 +55,7 @@
         <div class="card">
           <div class="card-header">
             <p class="text-sm font-semibold text-text">Ventas — últimos 6 meses</p>
-            <p class="text-xs text-text-muted">Pedidos completados por mes</p>
+            <p class="text-xs text-text-muted">Pedidos completados por mes (Bs.)</p>
           </div>
           <div class="card-body chart-wrap">
             <canvas ref="salesCanvas" />
@@ -54,7 +64,7 @@
         <div class="card">
           <div class="card-header">
             <p class="text-sm font-semibold text-text">Comisiones por tipo</p>
-            <p class="text-xs text-text-muted">Suma histórica por tipo de evento</p>
+            <p class="text-xs text-text-muted">Suma histórica por tipo de evento (Bs.)</p>
           </div>
           <div class="card-body chart-wrap">
             <canvas ref="commissionsCanvas" />
@@ -251,6 +261,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 import { adminService } from '@/services/api/adminService'
 import { apiErrorMessage } from '@/utils/apiErrorMessage'
+import { formatBob, formatBobAxis } from '@/utils/money'
 
 Chart.register(...registerables)
 
@@ -288,6 +299,7 @@ const modulos = [
   { to: '/admin/packages', title: 'Paquetes', text: 'Inscripción y venta: PV, precio, monto comisionable.' },
   { to: '/admin/orders', title: 'Pedidos (pagos)', text: 'Confirmar efectivo, QR o transferencia pendientes.' },
   { to: '/admin/withdrawals', title: 'Retiros', text: 'Aprobar o rechazar solicitudes de retiro.' },
+  { to: '/admin/support-tickets', title: 'Tickets soporte', text: 'Seguimiento a solicitudes de socios y clientes.' },
   { to: '/admin/reports', title: 'Reconciliación', text: 'Cierres de periodo, comisiones por clave y liderazgo.' },
   { to: '/admin/users', title: 'Usuarios', text: 'Búsqueda y estado de cuenta.' },
   { to: '/admin/tree', title: 'Árbol binario', text: 'Exploración de red binaria.' },
@@ -295,21 +307,39 @@ const modulos = [
 ]
 
 function formatBs(value) {
-  const n = Number(value)
-  if (Number.isNaN(n)) return String(value ?? '—')
-  return new Intl.NumberFormat('es-BO', { style: 'currency', currency: 'BOB', minimumFractionDigits: 2 }).format(n)
-}
-
-function formatBsNum(value) {
-  const n = Number(value)
-  if (Number.isNaN(n)) return '0'
-  return new Intl.NumberFormat('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
+  return formatBob(value)
 }
 
 function formatPv(value) {
   const n = Number(value)
   if (Number.isNaN(n)) return '—'
   return `${n.toLocaleString('es-BO', { maximumFractionDigits: 2 })} PV`
+}
+
+function moneyChartOptions(showLegend = true) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: showLegend },
+      tooltip: {
+        callbacks: {
+          label(ctx) {
+            const v = ctx.parsed?.y ?? ctx.parsed ?? 0
+            return `${ctx.dataset.label}: ${formatBob(v)}`
+          },
+        },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: (v) => formatBobAxis(v),
+        },
+      },
+    },
+  }
 }
 
 function destroyCharts() {
@@ -344,12 +374,7 @@ function buildCharts() {
           },
         ],
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: true } },
-        scales: { y: { beginAtZero: true } },
-      },
+      options: moneyChartOptions(true),
     })
   }
 
@@ -371,12 +396,7 @@ function buildCharts() {
           },
         ],
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } },
-      },
+      options: moneyChartOptions(false),
     })
   }
 

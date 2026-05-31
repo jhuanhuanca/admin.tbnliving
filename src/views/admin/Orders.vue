@@ -30,6 +30,7 @@
               <th class="px-4 py-3 font-semibold">Tipo</th>
               <th class="px-4 py-3 font-semibold">Ítems</th>
               <th class="px-4 py-3 text-end font-semibold">Total</th>
+              <th class="px-4 py-3 font-semibold">Entrega</th>
               <th class="px-4 py-3 font-semibold">Estado</th>
               <th class="px-4 py-3 font-semibold">Pago ref.</th>
               <th class="px-4 py-3 font-semibold">Factura</th>
@@ -38,7 +39,7 @@
           </thead>
           <tbody>
             <tr v-if="admin.loading.orders">
-              <td colspan="9" class="px-4 py-8 text-center text-text-muted">Cargando…</td>
+              <td colspan="10" class="px-4 py-8 text-center text-text-muted">Cargando…</td>
             </tr>
             <tr v-for="row in admin.orders.rows" v-else :key="row.id" class="border-t border-border">
               <td class="px-4 py-3">{{ row.id }}</td>
@@ -57,6 +58,15 @@
                 </p>
               </td>
               <td class="px-4 py-3 text-end font-semibold">{{ formatBs(row.total) }}</td>
+              <td class="px-4 py-3">
+                <span :class="deliveryModeBadgeClass(row.delivery_mode)">
+                  {{ deliveryModeLabel(row.delivery_mode) }}
+                </span>
+                <p v-if="isShippingOrder(row)" class="mt-1 max-w-[180px] text-xs text-text-muted">
+                  {{ deliverySummaryShort(row) }}
+                </p>
+                <p v-else-if="row.delivery_mode === 'recojo'" class="mt-1 text-xs text-text-muted">Sin envío</p>
+              </td>
               <td class="px-4 py-3">
                 <span v-if="row.estado === 'pendiente_pago'" class="badge badge-warn">Pendiente pago</span>
                 <span v-else class="badge badge-success">{{ row.estado }}</span>
@@ -107,7 +117,7 @@
               </td>
             </tr>
             <tr v-if="!admin.loading.orders && !admin.orders.rows.length">
-              <td colspan="9" class="px-4 py-8 text-center text-text-muted">No hay pedidos en este filtro.</td>
+              <td colspan="10" class="px-4 py-8 text-center text-text-muted">No hay pedidos en este filtro.</td>
             </tr>
           </tbody>
         </table>
@@ -157,6 +167,45 @@
           </ul>
         </div>
 
+        <div
+          v-if="selectedOrder"
+          class="rounded-xl border px-3 py-3"
+          :class="isShippingOrder(selectedOrder) ? 'border-warn/40 bg-warn/5' : 'border-border bg-white/2'"
+        >
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">Entrega y dirección</p>
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <span :class="deliveryModeBadgeClass(selectedOrder.delivery_mode)">
+                {{ deliveryModeLabel(selectedOrder.delivery_mode) }}
+              </span>
+              <template v-if="isShippingOrder(selectedOrder)">
+                <dl class="mt-2 space-y-1 text-sm">
+                  <div v-if="selectedOrder.shipping_departamento">
+                    <dt class="inline text-text-muted">Departamento:</dt>
+                    <dd class="inline font-medium text-text">{{ selectedOrder.shipping_departamento }}</dd>
+                  </div>
+                  <div v-if="selectedOrder.shipping_ciudad">
+                    <dt class="inline text-text-muted">Ciudad:</dt>
+                    <dd class="inline font-medium text-text">{{ selectedOrder.shipping_ciudad }}</dd>
+                  </div>
+                  <div v-if="selectedOrder.shipping_direccion">
+                    <dt class="block text-text-muted">Dirección:</dt>
+                    <dd class="font-medium text-text">{{ selectedOrder.shipping_direccion }}</dd>
+                  </div>
+                </dl>
+              </template>
+              <p v-else class="mt-2 text-sm text-text-muted">El cliente retirará el pedido personalmente.</p>
+            </div>
+            <div v-if="shippingCostAmount(selectedOrder) > 0" class="text-right text-sm">
+              <p class="text-xs text-text-muted">Costo de envío</p>
+              <p class="font-semibold text-text">{{ formatBs(selectedOrder.shipping_cost) }}</p>
+            </div>
+          </div>
+          <p class="mt-3 border-t border-border/60 pt-2 text-xs text-text-muted">
+            {{ deliveryNoticeFor(selectedOrder) }}
+          </p>
+        </div>
+
         <div class="overflow-x-auto rounded-xl border border-border">
           <table class="min-w-full text-left text-sm">
             <thead class="bg-white/3 text-xs text-text-muted">
@@ -187,6 +236,16 @@
               </tr>
             </tbody>
             <tfoot v-if="orderItems(selectedOrder).length">
+              <tr v-if="shippingCostAmount(selectedOrder) > 0" class="border-t border-border bg-white/2">
+                <td colspan="5" class="px-3 py-2 text-end text-xs text-text-muted">Subtotal productos</td>
+                <td class="px-3 py-2 text-end">{{ formatBs(orderSubtotalBeforeShipping(selectedOrder)) }}</td>
+                <td class="px-3 py-2"></td>
+              </tr>
+              <tr v-if="shippingCostAmount(selectedOrder) > 0" class="border-t border-border bg-white/2">
+                <td colspan="5" class="px-3 py-2 text-end text-xs text-text-muted">Envío</td>
+                <td class="px-3 py-2 text-end">{{ formatBs(selectedOrder.shipping_cost) }}</td>
+                <td class="px-3 py-2"></td>
+              </tr>
               <tr class="border-t border-border bg-white/2">
                 <td colspan="5" class="px-3 py-2 text-end text-xs font-semibold text-text-muted">Total pedido</td>
                 <td class="px-3 py-2 text-end font-semibold">{{ formatBs(selectedOrder.total) }}</td>
@@ -229,6 +288,15 @@ import {
   orderItemsPreview,
   pickingSummaryFromItems,
 } from '@/utils/orderLineDisplay'
+import {
+  deliveryModeBadgeClass,
+  deliveryModeLabel,
+  deliveryNoticeFor,
+  deliverySummaryShort,
+  isShippingOrder,
+  orderSubtotalBeforeShipping,
+  shippingCostAmount,
+} from '@/utils/orderDeliveryDisplay'
 
 const admin = useAdminStore()
 const ui = useUiStore()

@@ -40,11 +40,11 @@
         </div>
         <div class="card-body grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label class="text-xs font-semibold text-text-muted">Límite diario (USD)</label>
+            <label class="text-xs font-semibold text-text-muted">Límite diario (Bs.)</label>
             <input v-model.number="form.dailyLimit" type="number" min="0" step="1" class="input mt-1" />
           </div>
           <div>
-            <label class="text-xs font-semibold text-text-muted">Activación mensual (USD)</label>
+            <label class="text-xs font-semibold text-text-muted">Activación mensual (Bs.)</label>
             <input v-model.number="form.monthlyActivation" type="number" min="0" step="1" class="input mt-1" />
           </div>
           <div class="md:col-span-2">

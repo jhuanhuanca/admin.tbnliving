@@ -58,6 +58,7 @@ import { onMounted, ref } from 'vue'
 import Table from '@/components/admin/Table.vue'
 import { useAdminStore } from '@/stores/adminStore'
 import { useUiStore } from '@/stores/uiStore'
+import { formatBob } from '@/utils/money'
 
 const admin = useAdminStore()
 const ui = useUiStore()
@@ -74,7 +75,7 @@ const columns = [
 ]
 
 function formatMoney(v) {
-  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(v)
+  return formatBob(v)
 }
 
 async function apply() {

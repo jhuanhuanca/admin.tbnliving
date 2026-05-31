@@ -28,6 +28,12 @@ export function buildNavSections() {
           icon: icon('bank'),
           can: () => perms.can('withdrawals.view') || perms.can('withdrawals.approve'),
         },
+        {
+          to: '/admin/support-tickets',
+          label: 'Tickets soporte',
+          icon: icon('mail'),
+          can: () => perms.can('support.tickets') || perms.isSuperAdmin,
+        },
         { to: '/admin/wallet', label: 'Wallet', icon: icon('wallet'), can: () => true },
       ],
     },

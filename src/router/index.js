@@ -35,6 +35,11 @@ const routes = [
       ...analyticsRoutes,
       { path: 'wallet', name: 'admin.wallet', component: () => import('@/views/admin/Wallet.vue') },
       { path: 'withdrawals', name: 'admin.withdrawals', component: () => import('@/views/admin/Withdrawals.vue') },
+      {
+        path: 'support-tickets',
+        name: 'admin.supportTickets',
+        component: () => import('@/views/admin/SupportTickets.vue'),
+      },
       { path: 'products', name: 'admin.products', component: () => import('@/views/admin/Products.vue') },
       { path: 'packages', name: 'admin.packages', component: () => import('@/views/admin/Packages.vue') },
       { path: 'reports', name: 'admin.reports', component: () => import('@/views/admin/Reports.vue') },
