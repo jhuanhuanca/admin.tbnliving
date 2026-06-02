@@ -29,15 +29,16 @@ export const LS_AUTH_KEY = 'mlm_admin_auth'
 http.interceptors.request.use(async (config) => {
   const method = (config.method || 'get').toLowerCase()
   const needsCsrf = ['post', 'put', 'patch', 'delete'].includes(method)
-
-  if (needsCsrf && config.withCredentials) {
-    await ensureCsrfCookie()
-  }
-
   const token = localStorage.getItem(LS_TOKEN_KEY)
+
   if (token) {
     config.headers = config.headers || {}
     config.headers.Authorization = `Bearer ${token}`
+  }
+
+  // CSRF solo si no hay Bearer (login/registro público).
+  if (needsCsrf && config.withCredentials && !token) {
+    await ensureCsrfCookie()
   }
 
   return config
@@ -49,7 +50,7 @@ http.interceptors.response.use(
     const status = error.response?.status
     const config = error.config
 
-    if (status === 419 && config && !config.__csrfRetried) {
+    if (status === 419 && config && !config.__csrfRetried && !localStorage.getItem(LS_TOKEN_KEY)) {
       resetCsrfCookie()
       await ensureCsrfCookie()
       config.__csrfRetried = true
