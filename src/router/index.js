@@ -42,6 +42,11 @@ const routes = [
       },
       { path: 'products', name: 'admin.products', component: () => import('@/views/admin/Products.vue') },
       { path: 'packages', name: 'admin.packages', component: () => import('@/views/admin/Packages.vue') },
+      {
+        path: 'events-news',
+        name: 'admin.eventsNews',
+        component: () => import('@/views/admin/EventsNews.vue'),
+      },
       { path: 'reports', name: 'admin.reports', component: () => import('@/views/admin/Reports.vue') },
       {
         path: 'settings',

@@ -42,6 +42,7 @@ export function buildNavSections() {
       items: [
         { to: '/admin/products', label: 'Productos', icon: icon('box'), can: () => true },
         { to: '/admin/packages', label: 'Paquetes', icon: icon('layers'), can: () => true },
+        { to: '/admin/events-news', label: 'Eventos y noticias', icon: icon('calendar'), can: () => true },
       ],
     },
     {

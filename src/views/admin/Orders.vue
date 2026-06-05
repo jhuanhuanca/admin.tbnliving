@@ -33,13 +33,14 @@
               <th class="px-4 py-3 font-semibold">Entrega</th>
               <th class="px-4 py-3 font-semibold">Estado</th>
               <th class="px-4 py-3 font-semibold">Pago ref.</th>
+              <th class="px-4 py-3 font-semibold">Comprobante</th>
               <th class="px-4 py-3 font-semibold">Factura</th>
               <th class="px-4 py-3 text-end font-semibold">Acción</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="admin.loading.orders">
-              <td colspan="10" class="px-4 py-8 text-center text-text-muted">Cargando…</td>
+              <td colspan="11" class="px-4 py-8 text-center text-text-muted">Cargando…</td>
             </tr>
             <tr v-for="row in admin.orders.rows" v-else :key="row.id" class="border-t border-border">
               <td class="px-4 py-3">{{ row.id }}</td>
@@ -72,6 +73,17 @@
                 <span v-else class="badge badge-success">{{ row.estado }}</span>
               </td>
               <td class="px-4 py-3 text-text-muted">{{ row.payment_method || '—' }}</td>
+              <td class="px-4 py-3">
+                <button
+                  v-if="row.has_payment_proof"
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  @click="openProof(row)"
+                >
+                  Ver comprobante
+                </button>
+                <span v-else class="text-xs text-text-muted">Sin archivo</span>
+              </td>
               <td class="px-4 py-3">
                 <div class="flex flex-wrap items-center justify-end gap-2">
                   <span class="text-xs text-text-muted">{{ row.invoice?.numero_factura || '—' }}</span>
@@ -117,7 +129,7 @@
               </td>
             </tr>
             <tr v-if="!admin.loading.orders && !admin.orders.rows.length">
-              <td colspan="10" class="px-4 py-8 text-center text-text-muted">No hay pedidos en este filtro.</td>
+              <td colspan="11" class="px-4 py-8 text-center text-text-muted">No hay pedidos en este filtro.</td>
             </tr>
           </tbody>
         </table>
@@ -255,6 +267,19 @@
           </table>
         </div>
 
+        <div
+          v-if="selectedOrder?.has_payment_proof"
+          class="rounded-xl border border-brand/30 bg-brand/5 px-3 py-3"
+        >
+          <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-brand">Comprobante de pago</p>
+          <p class="text-sm text-text-muted mb-2">
+            Subido por el cliente al crear el pedido (transferencia / QR).
+          </p>
+          <button type="button" class="btn btn-primary btn-sm" @click="openProof(selectedOrder)">
+            Ver comprobante
+          </button>
+        </div>
+
         <div class="flex flex-wrap justify-end gap-2">
           <button
             v-if="selectedOrder.estado === 'completado'"
@@ -269,6 +294,49 @@
         </div>
       </div>
     </Modal>
+
+    <Modal
+      :open="proofOpen"
+      title="Comprobante de pago"
+      :subtitle="proofOrderId ? `Pedido #${proofOrderId}` : ''"
+      @close="closeProof"
+    >
+      <div class="space-y-3">
+        <p v-if="proofLoading" class="text-sm text-text-muted">Cargando comprobante…</p>
+        <p v-else-if="proofError" class="rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {{ proofError }}
+        </p>
+        <template v-else-if="proofBlobUrl">
+          <p v-if="proofFileName" class="text-xs text-text-muted">{{ proofFileName }}</p>
+          <img
+            v-if="proofMime.startsWith('image/')"
+            :src="proofBlobUrl"
+            alt="Comprobante de pago"
+            class="max-h-[70vh] w-full rounded-xl border border-border object-contain"
+          />
+          <iframe
+            v-else-if="proofMime === 'application/pdf'"
+            :src="proofBlobUrl"
+            title="Comprobante PDF"
+            class="h-[70vh] w-full rounded-xl border border-border bg-white"
+          />
+          <p v-else class="text-sm text-text-muted">
+            Vista previa no disponible para este formato.
+            <a :href="proofBlobUrl" :download="proofFileName" class="text-brand underline">Descargar archivo</a>
+          </p>
+          <div class="flex justify-end gap-2">
+            <a
+              :href="proofBlobUrl"
+              :download="proofFileName"
+              class="btn btn-ghost btn-sm"
+            >
+              Descargar
+            </a>
+            <button type="button" class="btn btn-primary btn-sm" @click="closeProof">Cerrar</button>
+          </div>
+        </template>
+      </div>
+    </Modal>
   </div>
 </template>
 
@@ -278,6 +346,7 @@ import { useAdminStore } from '@/stores/adminStore'
 import { useUiStore } from '@/stores/uiStore'
 import { adminService } from '@/services/api/adminService'
 import { usePrintDocument } from '@/composables/usePrintDocument'
+import { useOrderPaymentProof } from '@/composables/useOrderPaymentProof'
 import Modal from '@/components/admin/Modal.vue'
 import {
   lineCode,
@@ -301,6 +370,17 @@ import {
 const admin = useAdminStore()
 const ui = useUiStore()
 const { printing: printingDoc, printFromFetch } = usePrintDocument()
+const {
+  proofOpen,
+  proofLoading,
+  proofError,
+  proofBlobUrl,
+  proofMime,
+  proofOrderId,
+  proofFileName,
+  openProof,
+  closeProof,
+} = useOrderPaymentProof()
 
 const estadoFiltro = ref('pendiente_pago')
 const error = ref('')

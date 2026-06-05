@@ -1,5 +1,6 @@
 import { http } from './httpClient'
 import { assertPrintHtmlResponse } from '@/utils/printHtml'
+import { buildMultipartBody } from '@/utils/multipartForm'
 
 /** Normaliza respuesta paginada Laravel (axios response) */
 function paginatedRows(axiosRes) {
@@ -86,6 +87,15 @@ export const adminService = {
 
   async confirmOrderPayment(orderId, payload) {
     return (await http.post(`/api/v1/admin/orders/${orderId}/confirm-payment`, payload)).data
+  },
+
+  async fetchOrderPaymentProof(orderId) {
+    const res = await http.get(`/api/v1/admin/orders/${orderId}/payment-proof`, {
+      responseType: 'blob',
+    })
+    const mime = res.headers?.['content-type'] || res.data?.type || 'application/octet-stream'
+
+    return { blob: res.data, mime }
   },
 
   // --- IMPRESIÓN (HTML → ventana emergente → Guardar como PDF) ---
@@ -194,5 +204,61 @@ export const adminService = {
   async getBinaryNodeChildren(nodeId) {
     const res = (await http.get(`/api/v1/admin/tree/${nodeId}/children`)).data
     return res?.node ?? null
+  },
+
+  // --- EVENTOS / NOTICIAS ---
+  async listEvents() {
+    const res = (await http.get('/api/v1/admin/events')).data
+    return { rows: res.data ?? [] }
+  },
+
+  async createEvent(payload, flyerFile = null) {
+    const form = buildMultipartBody(payload, 'flyer', flyerFile)
+    return (await http.post('/api/v1/admin/events', form)).data
+  },
+
+  async updateEvent(id, payload, flyerFile = null) {
+    const form = buildMultipartBody(payload, 'flyer', flyerFile)
+    return (await http.put(`/api/v1/admin/events/${id}`, form)).data
+  },
+
+  async deactivateEvent(id) {
+    return (await http.delete(`/api/v1/admin/events/${id}`)).data
+  },
+
+  async listNews() {
+    const res = (await http.get('/api/v1/admin/news')).data
+    return { rows: res.data ?? [] }
+  },
+
+  async createNews(payload, imageFile = null) {
+    const form = buildMultipartBody(payload, 'image', imageFile)
+    return (await http.post('/api/v1/admin/news', form)).data
+  },
+
+  async updateNews(id, payload, imageFile = null) {
+    const form = buildMultipartBody(payload, 'image', imageFile)
+    return (await http.put(`/api/v1/admin/news/${id}`, form)).data
+  },
+
+  async deactivateNews(id) {
+    return (await http.delete(`/api/v1/admin/news/${id}`)).data
+  },
+
+  async listEventRegistrations({ estado = 'pendiente_pago', per_page = 50 } = {}) {
+    const res = await http.get('/api/v1/admin/event-registrations', { params: { estado, per_page } })
+    return paginatedRows(res)
+  },
+
+  async confirmEventRegistration(id, payload) {
+    return (await http.post(`/api/v1/admin/event-registrations/${id}/confirm-payment`, payload)).data
+  },
+
+  async fetchEventRegistrationPaymentProof(id) {
+    const res = await http.get(`/api/v1/admin/event-registrations/${id}/payment-proof`, {
+      responseType: 'blob',
+    })
+    const mime = res.headers?.['content-type'] || res.data?.type || 'application/octet-stream'
+    return { blob: res.data, mime }
   },
 }

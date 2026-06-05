@@ -300,6 +300,7 @@ const modulos = [
   { to: '/admin/orders', title: 'Pedidos (pagos)', text: 'Confirmar efectivo, QR o transferencia pendientes.' },
   { to: '/admin/withdrawals', title: 'Retiros', text: 'Aprobar o rechazar solicitudes de retiro.' },
   { to: '/admin/support-tickets', title: 'Tickets soporte', text: 'Seguimiento a solicitudes de socios y clientes.' },
+  { to: '/admin/events-news', title: 'Eventos y noticias', text: 'Capacitaciones virtuales/presenciales, flyers e inscripciones.' },
   { to: '/admin/reports', title: 'Reconciliación', text: 'Cierres de periodo, comisiones por clave y liderazgo.' },
   { to: '/admin/users', title: 'Usuarios', text: 'Búsqueda y estado de cuenta.' },
   { to: '/admin/tree', title: 'Árbol binario', text: 'Exploración de red binaria.' },
