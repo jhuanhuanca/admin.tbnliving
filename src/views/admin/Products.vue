@@ -85,8 +85,25 @@
           <textarea v-model="form.description" class="input mt-1 min-h-[72px]" rows="2" />
         </div>
         <div class="md:col-span-2">
-          <label class="text-xs font-semibold text-text-muted">URL imagen (opcional)</label>
+          <label class="text-xs font-semibold text-text-muted">Imagen del producto</label>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            class="input mt-1"
+            @change="onImageSelected"
+          />
+          <p class="mt-1 text-xs text-text-muted">JPG, PNG, WEBP o GIF. Máx. 5 MB. Si subes archivo, tiene prioridad sobre la URL legacy.</p>
+          <img
+            v-if="imagePreview"
+            :src="imagePreview"
+            alt="Vista previa"
+            class="mt-2 max-h-32 rounded-lg border border-border object-contain"
+          />
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs font-semibold text-text-muted">URL imagen legacy (opcional)</label>
           <input v-model="form.image_url" type="text" class="input mt-1" placeholder="https://..." />
+          <p class="mt-1 text-xs text-text-muted">Solo se usa si no hay imagen subida al servidor.</p>
         </div>
         <div class="md:col-span-2 flex justify-end gap-2">
           <button type="button" class="btn btn-ghost" @click="closeForm">Cancelar</button>
@@ -125,6 +142,8 @@ const categories = ref([])
 const formOpen = ref(false)
 const deleteOpen = ref(false)
 const deleting = ref(null)
+const imageFile = ref(null)
+const imagePreview = ref('')
 
 const form = reactive({
   id: null,
@@ -157,6 +176,8 @@ function formatBs(v) {
 }
 
 function resetForm() {
+  imageFile.value = null
+  imagePreview.value = ''
   Object.assign(form, {
     id: null,
     name: '',
@@ -185,12 +206,23 @@ async function load() {
   }
 }
 
+function onImageSelected(event) {
+  const file = event.target.files?.[0] ?? null
+  imageFile.value = file
+  if (file) {
+    imagePreview.value = URL.createObjectURL(file)
+  } else if (!form.image_url_resolved) {
+    imagePreview.value = ''
+  }
+}
+
 function openCreate() {
   resetForm()
   formOpen.value = true
 }
 
 function openEdit(p) {
+  imageFile.value = null
   Object.assign(form, {
     id: p.id,
     name: p.name ?? '',
@@ -200,10 +232,12 @@ function openEdit(p) {
       p.price_cliente_preferente != null && p.price_cliente_preferente !== '' ? String(p.price_cliente_preferente) : '',
     stock: p.stock ?? 0,
     image_url: p.image_url ?? '',
+    image_url_resolved: p.image_url_resolved ?? '',
     category_id: p.category_id ? String(p.category_id) : '',
     pv_points: String(p.pv_points ?? ''),
     estado: p.estado ?? 'activo',
   })
+  imagePreview.value = p.image_url_resolved || p.image_admin_url || p.image_url || ''
   formOpen.value = true
 }
 
@@ -230,10 +264,10 @@ async function guardar() {
       payload.price_cliente_preferente = parseFloat(String(pcp))
     }
     if (isEditing.value) {
-      await admin.updateProduct(form.id, payload)
+      await admin.updateProduct(form.id, payload, imageFile.value)
       ui.toast({ type: 'success', title: 'Producto actualizado' })
     } else {
-      await admin.createProduct(payload)
+      await admin.createProduct(payload, imageFile.value)
       ui.toast({ type: 'success', title: 'Producto creado' })
     }
     closeForm()

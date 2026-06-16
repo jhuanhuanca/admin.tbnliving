@@ -166,20 +166,20 @@ export const useAdminStore = defineStore('admin', {
       }
     },
 
-    async createProduct(payload) {
+    async createProduct(payload, imageFile = null) {
       this.loading.products = true
       try {
-        await adminService.createProduct(payload)
+        await adminService.createProduct(payload, imageFile)
         await this.fetchProducts()
       } finally {
         this.loading.products = false
       }
     },
 
-    async updateProduct(id, payload) {
+    async updateProduct(id, payload, imageFile = null) {
       this.loading.products = true
       try {
-        await adminService.updateProduct(id, payload)
+        await adminService.updateProduct(id, payload, imageFile)
         await this.fetchProducts()
       } finally {
         this.loading.products = false

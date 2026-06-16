@@ -132,12 +132,14 @@ export const adminService = {
     return { rows: res.data ?? [] }
   },
 
-  async createProduct(payload) {
-    return (await http.post('/api/v1/admin/products', payload)).data
+  async createProduct(payload, imageFile = null) {
+    const form = buildMultipartBody(payload, 'image', imageFile)
+    return (await http.post('/api/v1/admin/products', form)).data
   },
 
-  async updateProduct(id, payload) {
-    return (await http.put(`/api/v1/admin/products/${id}`, payload)).data
+  async updateProduct(id, payload, imageFile = null) {
+    const form = buildMultipartBody(payload, 'image', imageFile)
+    return (await http.put(`/api/v1/admin/products/${id}`, form)).data
   },
 
   async deleteProduct(id) {
