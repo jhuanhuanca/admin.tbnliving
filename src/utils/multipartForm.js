@@ -15,3 +15,10 @@ export function buildMultipartBody(payload, fileField, file) {
   }
   return form
 }
+
+/** POST + _method=PUT: PHP no procesa archivos en PUT multipart de forma fiable. */
+export function buildMultipartUpdateBody(payload, fileField, file) {
+  const form = buildMultipartBody(payload, fileField, file)
+  form.append('_method', 'PUT')
+  return form
+}

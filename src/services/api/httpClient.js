@@ -41,6 +41,18 @@ http.interceptors.request.use(async (config) => {
     await ensureCsrfCookie()
   }
 
+  // FormData: no forzar application/json; el navegador debe enviar multipart con boundary.
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    const headers = config.headers
+    if (headers?.delete) {
+      headers.delete('Content-Type')
+      headers.delete('content-type')
+    } else if (headers) {
+      delete headers['Content-Type']
+      delete headers['content-type']
+    }
+  }
+
   return config
 })
 

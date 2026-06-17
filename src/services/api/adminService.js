@@ -1,6 +1,6 @@
 import { http } from './httpClient'
 import { assertPrintHtmlResponse } from '@/utils/printHtml'
-import { buildMultipartBody } from '@/utils/multipartForm'
+import { buildMultipartBody, buildMultipartUpdateBody } from '@/utils/multipartForm'
 
 /** Normaliza respuesta paginada Laravel (axios response) */
 function paginatedRows(axiosRes) {
@@ -138,8 +138,11 @@ export const adminService = {
   },
 
   async updateProduct(id, payload, imageFile = null) {
-    const form = buildMultipartBody(payload, 'image', imageFile)
-    return (await http.put(`/api/v1/admin/products/${id}`, form)).data
+    if (imageFile) {
+      const form = buildMultipartUpdateBody(payload, 'image', imageFile)
+      return (await http.post(`/api/v1/admin/products/${id}`, form)).data
+    }
+    return (await http.put(`/api/v1/admin/products/${id}`, payload)).data
   },
 
   async deleteProduct(id) {
@@ -220,8 +223,11 @@ export const adminService = {
   },
 
   async updateEvent(id, payload, flyerFile = null) {
-    const form = buildMultipartBody(payload, 'flyer', flyerFile)
-    return (await http.put(`/api/v1/admin/events/${id}`, form)).data
+    if (flyerFile) {
+      const form = buildMultipartUpdateBody(payload, 'flyer', flyerFile)
+      return (await http.post(`/api/v1/admin/events/${id}`, form)).data
+    }
+    return (await http.put(`/api/v1/admin/events/${id}`, payload)).data
   },
 
   async deactivateEvent(id) {
@@ -239,8 +245,11 @@ export const adminService = {
   },
 
   async updateNews(id, payload, imageFile = null) {
-    const form = buildMultipartBody(payload, 'image', imageFile)
-    return (await http.put(`/api/v1/admin/news/${id}`, form)).data
+    if (imageFile) {
+      const form = buildMultipartUpdateBody(payload, 'image', imageFile)
+      return (await http.post(`/api/v1/admin/news/${id}`, form)).data
+    }
+    return (await http.put(`/api/v1/admin/news/${id}`, payload)).data
   },
 
   async deactivateNews(id) {
