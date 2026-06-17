@@ -32,7 +32,11 @@ http.interceptors.request.use(async (config) => {
 
   if (token) {
     config.headers = config.headers || {}
-    config.headers.Authorization = `Bearer ${token}`
+    if (typeof config.headers.set === 'function') {
+      config.headers.set('Authorization', `Bearer ${token}`)
+    } else {
+      config.headers.Authorization = `Bearer ${token}`
+    }
   }
 
   // CSRF solo si no hay Bearer (login/registro público).
@@ -49,6 +53,10 @@ http.interceptors.request.use(async (config) => {
     } else if (headers) {
       delete headers['Content-Type']
       delete headers['content-type']
+    }
+    // Reafirmar Bearer tras tocar headers (axios 1.x puede perderlo con FormData).
+    if (token && typeof headers?.set === 'function') {
+      headers.set('Authorization', `Bearer ${token}`)
     }
   } else if (
     config.data != null

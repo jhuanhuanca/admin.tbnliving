@@ -132,6 +132,10 @@ export const adminService = {
     return { rows: res.data ?? [] }
   },
 
+  async productImageUploadStatus() {
+    return (await http.get('/api/v1/admin/products/image-upload-status')).data
+  },
+
   async createProduct(payload, imageFile = null) {
     if (imageFile) {
       const form = buildMultipartBody(payload, 'image', imageFile)

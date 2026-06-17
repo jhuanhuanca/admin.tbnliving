@@ -94,6 +94,9 @@
             @change="onImageSelected"
           />
           <p class="mt-1 text-xs text-text-muted">JPG, PNG, WEBP o GIF. Máx. 5 MB. Si subes archivo, tiene prioridad sobre la URL legacy.</p>
+          <p v-if="imageUploadHint" class="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
+            {{ imageUploadHint }}
+          </p>
           <img
             v-if="imagePreview"
             :src="imagePreview"
@@ -146,6 +149,8 @@ const deleteOpen = ref(false)
 const deleting = ref(null)
 const imageFile = ref(null)
 const imagePreview = ref('')
+const imageUploadReady = ref(true)
+const imageUploadHint = ref('')
 
 const form = reactive({
   id: null,
@@ -208,6 +213,17 @@ async function load() {
   }
 }
 
+async function loadImageUploadStatus() {
+  try {
+    const status = await adminService.productImageUploadStatus()
+    imageUploadReady.value = Boolean(status?.ready)
+    imageUploadHint.value = status?.ready ? '' : (status?.message || 'El servidor no está listo para subir imágenes.')
+  } catch {
+    imageUploadReady.value = true
+    imageUploadHint.value = ''
+  }
+}
+
 function onImageSelected(event) {
   const file = event.target.files?.[0] ?? null
   if (file && file.size > 5 * 1024 * 1024) {
@@ -217,6 +233,9 @@ function onImageSelected(event) {
     return
   }
   imageFile.value = file
+  if (file && !imageUploadReady.value && imageUploadHint.value) {
+    error.value = imageUploadHint.value
+  }
   if (file) {
     imagePreview.value = URL.createObjectURL(file)
   } else if (!form.image_url_resolved) {
@@ -228,6 +247,7 @@ function openCreate() {
   resetForm()
   error.value = ''
   formOpen.value = true
+  loadImageUploadStatus()
 }
 
 function openEdit(p) {
@@ -249,6 +269,7 @@ function openEdit(p) {
   })
   imagePreview.value = p.image_url_resolved || p.image_admin_url || p.image_url || ''
   formOpen.value = true
+  loadImageUploadStatus()
 }
 
 function closeForm() {
@@ -283,6 +304,10 @@ async function guardar() {
     const pcp = form.price_cliente_preferente
     if (pcp !== '' && pcp != null && !Number.isNaN(parseFloat(String(pcp)))) {
       payload.price_cliente_preferente = parseFloat(String(pcp))
+    }
+    if (imageFile.value && !imageUploadReady.value) {
+      error.value = imageUploadHint.value || 'El servidor no está listo para subir imágenes.'
+      return
     }
     if (isEditing.value) {
       await admin.updateProduct(form.id, payload, imageFile.value)

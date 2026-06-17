@@ -11,6 +11,13 @@ export function apiErrorMessage(err, fallback = 'Error de API') {
 
   if (d?.message) return d.message
 
+  if (d?.code === 'migration_required') {
+    return 'Falta migración en el servidor. Ejecute: php artisan migrate --force'
+  }
+  if (d?.code === 'storage_not_writable') {
+    return 'El servidor no puede escribir en storage/. Contacte al administrador del hosting.'
+  }
+
   if (!err?.response) {
     if (err?.code === 'ERR_NETWORK') {
       return 'No se pudo conectar con la API. Si acabas de subir una imagen, verifica que el servidor tenga espacio y permisos en storage/.'
