@@ -3,7 +3,21 @@
  */
 export function apiErrorMessage(err, fallback = 'Error de API') {
   const d = err?.response?.data
+
+  if (d?.errors && typeof d.errors === 'object') {
+    const first = Object.values(d.errors).flat().find(Boolean)
+    if (first) return String(first)
+  }
+
   if (d?.message) return d.message
+
+  if (!err?.response) {
+    if (err?.code === 'ERR_NETWORK') {
+      return 'No se pudo conectar con la API. Si acabas de subir una imagen, verifica que el servidor tenga espacio y permisos en storage/.'
+    }
+    return err?.message || fallback
+  }
+
   if (d?.code === 'MLM_UNAUTHORIZED') {
     return 'Token MLM interno inválido. En el API core: INTERNAL_SYNC_TOKEN debe coincidir con el servicio interno.'
   }

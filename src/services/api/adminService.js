@@ -1,6 +1,6 @@
 import { http } from './httpClient'
 import { assertPrintHtmlResponse } from '@/utils/printHtml'
-import { buildMultipartBody, buildMultipartUpdateBody } from '@/utils/multipartForm'
+import { buildMultipartBody } from '@/utils/multipartForm'
 
 /** Normaliza respuesta paginada Laravel (axios response) */
 function paginatedRows(axiosRes) {
@@ -133,13 +133,16 @@ export const adminService = {
   },
 
   async createProduct(payload, imageFile = null) {
-    const form = buildMultipartBody(payload, 'image', imageFile)
-    return (await http.post('/api/v1/admin/products', form)).data
+    if (imageFile) {
+      const form = buildMultipartBody(payload, 'image', imageFile)
+      return (await http.post('/api/v1/admin/products', form)).data
+    }
+    return (await http.post('/api/v1/admin/products', payload)).data
   },
 
   async updateProduct(id, payload, imageFile = null) {
     if (imageFile) {
-      const form = buildMultipartUpdateBody(payload, 'image', imageFile)
+      const form = buildMultipartBody(payload, 'image', imageFile)
       return (await http.post(`/api/v1/admin/products/${id}`, form)).data
     }
     return (await http.put(`/api/v1/admin/products/${id}`, payload)).data
@@ -218,13 +221,16 @@ export const adminService = {
   },
 
   async createEvent(payload, flyerFile = null) {
-    const form = buildMultipartBody(payload, 'flyer', flyerFile)
-    return (await http.post('/api/v1/admin/events', form)).data
+    if (flyerFile) {
+      const form = buildMultipartBody(payload, 'flyer', flyerFile)
+      return (await http.post('/api/v1/admin/events', form)).data
+    }
+    return (await http.post('/api/v1/admin/events', payload)).data
   },
 
   async updateEvent(id, payload, flyerFile = null) {
     if (flyerFile) {
-      const form = buildMultipartUpdateBody(payload, 'flyer', flyerFile)
+      const form = buildMultipartBody(payload, 'flyer', flyerFile)
       return (await http.post(`/api/v1/admin/events/${id}`, form)).data
     }
     return (await http.put(`/api/v1/admin/events/${id}`, payload)).data
@@ -240,13 +246,16 @@ export const adminService = {
   },
 
   async createNews(payload, imageFile = null) {
-    const form = buildMultipartBody(payload, 'image', imageFile)
-    return (await http.post('/api/v1/admin/news', form)).data
+    if (imageFile) {
+      const form = buildMultipartBody(payload, 'image', imageFile)
+      return (await http.post('/api/v1/admin/news', form)).data
+    }
+    return (await http.post('/api/v1/admin/news', payload)).data
   },
 
   async updateNews(id, payload, imageFile = null) {
     if (imageFile) {
-      const form = buildMultipartUpdateBody(payload, 'image', imageFile)
+      const form = buildMultipartBody(payload, 'image', imageFile)
       return (await http.post(`/api/v1/admin/news/${id}`, form)).data
     }
     return (await http.put(`/api/v1/admin/news/${id}`, payload)).data

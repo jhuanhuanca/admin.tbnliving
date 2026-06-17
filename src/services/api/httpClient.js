@@ -13,7 +13,6 @@ export const http = axios.create({
   baseURL: import.meta.env.VITE_ADMIN_API_BASE_URL ?? defaultApiBase,
   headers: {
     Accept: 'application/json',
-    'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   },
   timeout: 30000,
@@ -41,15 +40,25 @@ http.interceptors.request.use(async (config) => {
     await ensureCsrfCookie()
   }
 
-  // FormData: no forzar application/json; el navegador debe enviar multipart con boundary.
-  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+  // FormData: el navegador debe fijar multipart/form-data con boundary.
+  const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData
+  if (isFormData) {
     const headers = config.headers
-    if (headers?.delete) {
-      headers.delete('Content-Type')
-      headers.delete('content-type')
+    if (headers?.setContentType) {
+      headers.setContentType(false)
     } else if (headers) {
       delete headers['Content-Type']
       delete headers['content-type']
+    }
+  } else if (
+    config.data != null
+    && typeof config.data === 'object'
+    && !(config.data instanceof Blob)
+    && !Array.isArray(config.data)
+  ) {
+    config.headers = config.headers || {}
+    if (!config.headers['Content-Type'] && !config.headers['content-type']) {
+      config.headers['Content-Type'] = 'application/json'
     }
   }
 

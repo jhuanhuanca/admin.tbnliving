@@ -46,6 +46,7 @@
 
     <Modal :open="formOpen" :title="isEditing ? 'Editar producto' : 'Nuevo producto'" @close="closeForm">
       <form class="grid grid-cols-1 gap-4 md:grid-cols-2" @submit.prevent="guardar">
+        <p v-if="error" class="md:col-span-2 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{{ error }}</p>
         <div class="md:col-span-2">
           <label class="text-xs font-semibold text-text-muted">Nombre</label>
           <input v-model="form.name" type="text" class="input mt-1" required />
@@ -127,6 +128,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import Table from '@/components/admin/Table.vue'
 import Modal from '@/components/admin/Modal.vue'
 import { adminService } from '@/services/api/adminService'
+import { apiErrorMessage } from '@/utils/apiErrorMessage'
 import { useAdminStore } from '@/stores/adminStore'
 import { useUiStore } from '@/stores/uiStore'
 
@@ -208,6 +210,12 @@ async function load() {
 
 function onImageSelected(event) {
   const file = event.target.files?.[0] ?? null
+  if (file && file.size > 5 * 1024 * 1024) {
+    error.value = 'La imagen no puede superar 5 MB.'
+    event.target.value = ''
+    imageFile.value = null
+    return
+  }
   imageFile.value = file
   if (file) {
     imagePreview.value = URL.createObjectURL(file)
@@ -218,11 +226,13 @@ function onImageSelected(event) {
 
 function openCreate() {
   resetForm()
+  error.value = ''
   formOpen.value = true
 }
 
 function openEdit(p) {
   imageFile.value = null
+  error.value = ''
   Object.assign(form, {
     id: p.id,
     name: p.name ?? '',
@@ -249,14 +259,25 @@ async function guardar() {
   saving.value = true
   error.value = ''
   try {
+    const price = parseFloat(form.price)
+    const pv = parseFloat(form.pv_points)
+    if (Number.isNaN(price) || price < 0) {
+      error.value = 'Ingresa un precio válido.'
+      return
+    }
+    if (Number.isNaN(pv) || pv < 0) {
+      error.value = 'Ingresa PV válido.'
+      return
+    }
+
     const payload = {
       name: form.name.trim(),
       description: form.description?.trim() || null,
-      price: parseFloat(form.price),
+      price,
       stock: parseInt(String(form.stock), 10) || 0,
       image_url: form.image_url?.trim() || null,
       category_id: form.category_id ? parseInt(form.category_id, 10) : null,
-      pv_points: parseFloat(form.pv_points),
+      pv_points: pv,
       estado: form.estado,
     }
     const pcp = form.price_cliente_preferente
@@ -274,7 +295,7 @@ async function guardar() {
     resetForm()
     await load()
   } catch (e) {
-    error.value = e?.response?.data?.message || 'Error al guardar.'
+    error.value = apiErrorMessage(e, 'Error al guardar.')
   } finally {
     saving.value = false
   }
